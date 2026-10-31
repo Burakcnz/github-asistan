@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  githubId      String    @unique
+  name          String?
+  email         String?   @unique
+  avatarUrl     String?
+  githubToken   String?
+  ollamaModel   String    @default("llama3:8b")
+  workspacePath String?
+  projects      Project[]
+  settings      AppSettings[]
+  createdAt     DateTime  @default(now())
+
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  name          String
+  localPath     String
+  type          String
+  isHidden      Boolean   @default(false)
+  isOnGithub    Boolean   @default(false)
+  githubUrl     String?
+  githubRepoId  String?   @unique
+  /// Kullanıcının seçtiği GitHub repo adı (yoksa klasör adından türetilir)
+  repoName      String?
+  /// README başlığında kullanılan görünen ad
+  displayName   String?
+  description   String?
+  language      String?
+  fileCount     Int       @default(0)
+  totalSize     Int       @default(0)
+  lastModified  DateTime
+  hasGit        Boolean   @default(false)
+  hasReadme     Boolean   @default(false)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readme        Readme?
+  updates       Update[]
+  notes         Note[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, localPath])
+  @@index([userId])
+}
+
+model Readme {
+  id             String    @id @default(cuid())
+  content        String
+  blocks         String    @default("[]")
+  htmlPreview    String?
+  projectId      String    @unique
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version        Int       @default(1)
+  pushedToGithub Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Update {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  commitSha String?
+  message   String
+  author    String?
+  date      DateTime
+  type      String
+  aiSummary String?
+  source    String   @default("local")
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String?
+  content   String
+  isPinned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model AppSettings {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+}
